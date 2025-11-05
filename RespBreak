@@ -1,0 +1,39 @@
+Role 1: The "Security & Filtering" Lead: 汪
+  This person is responsible for checking every incoming request before it hits the main application logic.    
+  Primary Components: Authentication & API Throttling    
+  Core Responsibilities:    
+    Implement the IAuthService interface.    
+    Implement the IRateLimiter interface.        
+    Create a "token bucket" or "sliding window" algorithm for the rate limiter.        
+    Create a simple in-memory "database" (like a Map) to store users and their generated API keys.    
+  Key Classes to Build:    
+    AuthService (implements IAuthService)        
+    RateLimiter (implements IRateLimiter)        
+    User (a simple data class)
+
+Role 2: The "Backend & Data Model" Lead：刘
+  This person is responsible for all the "business logic" and the data structures that the API uses. They build the actual trading simulation.
+  Primary Components: Generic Connectivity & Data Models   
+  Core Responsibilities:    
+    Implement the IConnector interface by building a mock broker.        
+    Design and build all data-model classes.        
+    Simulate the "flight search" (i.e., getMarketData) by generating or returning fake stock data.       
+    Simulate order execution (i.e., submitOrder).    
+  Key Classes to Build:   
+    MockBrokerConnector (implements IConnector)        
+    MarketDataQuery (your "flight search" model: symbol, startDate, etc.)        
+    PriceBar (the data you return: open, high, low, close, timestamp)        
+    TradeOrder (abstract base class)
+    MarketOrder, LimitOrder (concrete classes inheriting from TradeOrder)
+
+Role 3: The "Gateway & Integration" Lead：Tim
+  This person builds the main entry point and is responsible for putting all the pieces together. They are the "customer" of the other two team members.   
+  Primary Components: API Gateway (Facade Pattern) & Final Integration   
+  Core Responsibilities:    
+    Build the APIGateway class.   
+    Use Dependency Injection to "plug in" the IAuthService, IRateLimiter, and IConnector interfaces.     
+    Write the core logic for each public gateway method (check auth, check throttle, then call connector).      
+    Write the final Main.java or main.py that boots up the entire application and demonstrates it working.       
+  Key Classes to Build:
+    APIGateway (the facade)        
+    Main (the final runnable program)
