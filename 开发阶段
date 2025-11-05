@@ -1,0 +1,161 @@
+Phase 1: Design & Architecture
+
+    1. Identify Your Core "Nouns" (These become your classes):
+    
+        User: Represents someone using the API. Will hold credentials.
+        
+        APIKey / Token: An object that represents a user's authenticated session.
+        
+        APIGateway: The single entry point for all API calls. This is the Facade Pattern.
+        
+        RateLimiter / Throttler: An object responsible for tracking and blocking excessive requests.
+        
+        IConnector (Interface): An abstract definition of a connection. This is crucial for your "generic connectivity."
+        
+        MockBrokerConnector (Concrete Class): A simulation of a real broker that implements the IConnector interface.
+        
+        MarketDataQuery: An object that models your "flight search" data model. It will hold parameters like symbol, startDate, endDate, timeframe.
+        
+        TradeOrder: A base class for an order (buy/sell).
+        
+        LimitOrder / MarketOrder: Classes that inherit from TradeOrder.
+    
+    2. Map Out the Relationships (How classes talk to each other):
+    
+        A User "has" credentials.
+        
+        An AuthService (another potential class) "validates" a User and "produces" a Token.
+        
+        The APIGateway "has" a RateLimiter.
+        
+        The APIGateway "has" an IConnector. (This is Dependency Injection).
+        
+        The APIGateway "receives" MarketDataQuery and TradeOrder objects from the user.
+        
+        The APIGateway "calls" the RateLimiter on every request.
+        
+        If the request is allowed, the APIGateway "delegates" the work to the IConnector.
+    
+    3. Define Your Interfaces (The "Contracts"): This is the key to your "generic connectivity."
+    
+        IConnector Interface:
+        
+        connect(credentials)
+        
+        disconnect()
+        
+        submitOrder(TradeOrder order)
+        
+        getMarketData(MarketDataQuery query)
+        
+        getAccountBalance()
+
+Phase 2: Implementation
+
+    Step 1: Authentication
+
+        Create your User class (e.g., with username, hashedPassword).
+        
+        Create an AuthService class.
+        
+        Implement a method: login(username, password).
+        
+        For this project, you can "fake" the database. Just have a Map<String, User> in your AuthService.
+        
+        If login is successful, generate a simple random string (your "API Key") and return it. Store this key in another map, linking it to the User object.
+
+    Step 2: API Throttling (Rate Limiting)
+    
+        Create a RateLimiter class.
+        
+        It needs one key method: isRequestAllowed(String apiKey).
+        
+        Simple Logic (Token Bucket):
+        
+        Have a Map<String, Queue<Long>> where the String is the apiKey and Queue<Long> stores the timestamps of their recent requests.
+        
+        When isRequestAllowed is called:
+        
+        Get the queue for the apiKey.
+        
+        Remove all timestamps older than your window (e.g., 60 seconds ago).
+        
+        If queue.size() < MAX_REQUESTS (e.g., 100), add the current timestamp and return true.
+        
+        Otherwise, return false.
+    
+    Step 3: The API Gateway (Facade Pattern)
+    
+        Create the APIGateway class. This is your main class.
+        
+        It will need your AuthService, RateLimiter, and IConnector objects passed into its constructor (Dependency Injection).
+        
+        Create public methods for your API functions:
+        
+        submitOrder(String apiKey, TradeOrder order)
+        
+        getMarketData(String apiKey, MarketDataQuery query)
+    
+    Step 4: Generic Connectivity & Mocking
+    
+        Define the IConnector interface (as designed in Phase 1).
+        
+        Create your MockBrokerConnector class that implements IConnector.
+        
+        In this mock class, just simulate the work.
+        
+        submitOrder: Just print "Order for [symbol] submitted" to the console.
+        
+        getMarketData: This is where your "flight search" model comes in!
+
+Phase 3: Integrating the "Flight Search" Data Model
+
+    Your prompt is using "flight search" as an analogy for querying market data. This is a great way to think about it.
+
+    Flight Search: searchFlights(origin, destination, date)
+
+    Market Data: getMarketData(symbol, timeFrame, startDate, endDate)
+
+    You've already defined the MarketDataQuery class in your design. Now, implement it.
+
+    MarketDataQuery Class:
+
+    It should have properties like String symbol (e.g., "AAPL"), String timeFrame (e.g., "1D" for daily), LocalDate startDate, LocalDate endDate.
+
+    MockBrokerConnector Implementation:
+
+    Implement the getMarketData(MarketDataQuery query) method.
+
+    Inside this method, just return fake, hardcoded data.
+
+Phase 4: Testing
+
+    Unit Tests: Use a testing framework (like JUnit for Java or pytest for Python).
+    
+        Test your RateLimiter: Write a test that calls isRequestAllowed 101 times in a loop and asserts that the 101st call returns false.
+        
+        Test your AuthService: Test that a valid login returns a key and an invalid login returns null.
+        
+        Test your APIGateway: This is an integration test.
+        
+            Test 1: Call getMarketData with a bad API key. Assert you get an "Invalid API Key" error.
+            
+            Test 2: Call getMarketData 101 times with a good key. Assert you get a "Rate limit exceeded" error on the last call.
+            
+            Test 3: Call getMarketData with a good key. Assert you get back the fake "AAPL" data from your MockBrokerConnector.
+    
+    Demonstration (Your main method):
+    
+        Create a simple main program that simulates a user.
+        
+        This program will:
+        
+        Create the AuthService, RateLimiter, and MockBrokerConnector.
+        
+        Create the APIGateway, passing those objects into its constructor.
+    
+        Simulate a user logging in to get a key.
+        
+        Simulate the user making a MarketDataQuery (your "flight search").
+        
+        Print the results to the console.
