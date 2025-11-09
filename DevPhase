@@ -25,34 +25,7 @@ Phase 1: Design & Architecture
       getMarketData(MarketDataQuery query)
       getAccountBalance()
 Phase 2: Implementation
-  Step 1: Authentication
-    Create your User class (e.g., with username, hashedPassword).        
-      Create an AuthService class.        
-      Implement a method: login(username, password).        
-      For this project, you can "fake" the database. Just have a Map<String, User> in your AuthService.        
-      If login is successful, generate a simple random string (your "API Key") and return it. Store this key in another map, linking it to the User object.
-  Step 2: API Throttling (Rate Limiting)    
-      Create a RateLimiter class.        
-      It needs one key method: isRequestAllowed(String apiKey).        
-      Simple Logic (Token Bucket):        
-      Have a Map<String, Queue<Long>> where the String is the apiKey and Queue<Long> stores the timestamps of their recent requests.        
-      When isRequestAllowed is called:        
-      Get the queue for the apiKey.        
-      Remove all timestamps older than your window (e.g., 60 seconds ago).        
-      If queue.size() < MAX_REQUESTS (e.g., 100), add the current timestamp and return true.        
-      Otherwise, return false.    
-  Step 3: The API Gateway (Facade Pattern)    
-      Create the APIGateway class. This is your main class.        
-      It will need your AuthService, RateLimiter, and IConnector objects passed into its constructor (Dependency Injection).        
-      Create public methods for your API functions:        
-      submitOrder(String apiKey, TradeOrder order)        
-      getMarketData(String apiKey, MarketDataQuery query)    
-  Step 4: Generic Connectivity & Mocking    
-      Define the IConnector interface (as designed in Phase 1).        
-      Create your MockBrokerConnector class that implements IConnector.        
-      In this mock class, just simulate the work.        
-      submitOrder: Just print "Order for [symbol] submitted" to the console.        
-      getMarketData: This is where your "flight search" model comes in!
+------------------
 Phase 3: Integrating the "Flight Search" Data Model
   Your prompt is using "flight search" as an analogy for querying market data. This is a great way to think about it.
   Flight Search: searchFlights(origin, destination, date)
