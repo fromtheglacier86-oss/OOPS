@@ -1,0 +1,138 @@
+# Step 1: Key Classes to Build in Order:
+  1. MarketDataQuery (This object represents the user's request for data)
+  2. PriceBar (This object represents a single piece of data returned from a query)
+  3. TradeOrder (abstract base class)
+  4. MarketOrder, LimitOrder (concrete classes inheriting from TradeOrder)
+  5. OrderReceipt(This is the simple object you return after a user submits an order)
+  Comment:
+    Build all data models in this step.
+
+# Step 2: Implement the IConnector Interface:
+  1. getMarketData(MarketDataQuery query)
+  2. submitOrder(TradeOrder order)
+  3. getAccountInfo(String apiKey)
+  Comment:
+    Build the engine that uses the data models, which is MockBrokerConnector (implements IConnector).
+
+# code for Step 1:
+import datetime
+from datetime import date
+
+class MarketDataQuery:
+  def __init__(self,
+               symbol: str, # symbol means permno
+               time_frame: str,
+               start_date: date,
+               end_date: date,
+               frequency: str = 'daily',
+               source: str = 'yahoo'):
+    self.symbol = symbol
+    self.time_frame = time_frame
+    self.start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d') # convert string to datetime, opposite to strftime
+    self.end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    self.frequency = frequency
+    self.source = source
+
+    self._validate()
+
+  def _validate(self):
+    if self.start_date > self.end_date:
+      raise ValueError('Start date must be before end date')
+    if self.frequency not in ['daily', 'weekly', 'monthly']:
+      raise ValueError('Frequency must be daily, weekly, or monthly')
+
+  def fetch(self):
+    if self.source == 'test':
+      dates = pd.date_range(start=self.start_date, end=self.end_date, freq=self.frequency)
+      prices = [100 + i*0.5 for i in range(len(dates))] # add 0.5 each day
+      df = pd.DataFrame({'date': dates, 'price': prices})
+      return df
+    elif self.source == 'yahoo':
+      import yfinance as yf
+      df = yf.download(
+        self.symbol,
+        start = self.start_date.strftime('%Y-%m-%d'), # convert the datetime object to string, then send it to API
+        end = self.end_date.strftime('%Y-%m-%d'),
+        interval = '1d' if self.frequency == 'daily' else '1wk', # '1d' means one day
+      )
+      df.reset_index(inplace=True)
+      return df
+    else:
+      raise ValueError(f'Unknown source: {self.source}')
+
+class PriceBar:
+  def __init__(self, date, open_price, close_price, high_price, low_price, volume):
+    self.date = date
+    self.open = open_price
+    self.close = close_price
+    self.high = high_price
+    self.low = low_price
+    self.volume = volume
+
+  def mid_price(self):
+    return (self.high + self.low) / 2
+
+  def is_bullish(self):
+    return self.open < self.close
+
+  def is_bearish(self):
+    return self.open > self.close
+
+  def __repr__(self):
+    return (f'PriceBar(date={self.date}, open={self.open}, close={self.close}, '
+            f'high={self.high}, low={self.low}, volume={self.volume})')
+
+class TradeOrder:
+  def __init__(self, symbol, side, quantity, order_type='market', price=None, timestamp, status): # default order_type is market_order
+    self.symbol = symbol.upper()
+    self.side = side.upper() # 'BUY' or 'SELL'
+    self.quantity = quantity
+    self.order_type = order_type.lower()
+    self.price = price
+    self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # it gives each order a creation time
+    self.status = 'pending'
+
+  def cancel(self):
+    if self.status == 'pending':
+      self.status = 'cancelled'
+
+  def __repr__(self):
+    return (f'TradeOrder(symbol={self.symbol}, side={self.side}, quantity={self.quantity})'
+            f'type={self.order_type}, price={self.price}, status={self.status})')
+
+class MarketOrder(TradeOrder):
+  def __init__(self, symbol, side, quantity):
+    super().__init__(symbol, side, quantity, order_type='market') # super() is used for inheritance
+
+  def execute(self, market_price):
+    self.price = market_price
+    self.status = 'filled'
+
+class LimitOrder(TradeOrder):
+  def __init__(self, symbol, side, quantity, limit_price):
+    super().__init__(symbol, side, quantity, order_type='limit', price=limit_price)
+
+  def execute(self, market_price):
+    if self.side == 'BUY' and market_price <= self.price:
+      self.status = 'filled'
+    elif self.side == 'SELL' and market_price >= self.price:
+      self.status = 'filled'
+    else:
+      self.status = 'pending'
+
+class OrderReceipt:
+  def __init__(self, symbol, side, order, executed_price=None, executed_quantity=0, timestamp, status='pending'):
+    self.order_id = id(order)
+    self.symbol = symbol.upper()
+    self.side = side.upper()
+    self.original_quantity = order.quantity # order here is an object from TradeOrder
+    self.executed_quantity = executed_quantity
+    self.executed_price = executed_price
+    self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    self.status = status
+
+  def __repr__(self):
+    return (f'OrderReceipt(symbol={self.symbol.upper()}, side={self.side.upper()}, '
+            f'executed_qty={self.executed_quantity}/{self.original_quantity}, '
+            f'executed_price={self.executed_price}, status={self.status}, '
+            f'timestamp={self.timestamp})')
