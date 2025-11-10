@@ -136,3 +136,49 @@ class OrderReceipt:
             f'executed_qty={self.executed_quantity}/{self.original_quantity}, '
             f'executed_price={self.executed_price}, status={self.status}, '
             f'timestamp={self.timestamp})')
+
+  class IConnector: # defines a contract for how your system talks to any broker. you can swap in different broker connectors
+    def getMarketData(self, symbol, start_date, end_date):
+        raise NotImplementedError('Subclasses must implement getMarketData')
+
+    def submitOrder(self, order):
+        raise NotImplementedError('Subclasses must implement submitOrder')
+
+    def getAccountInfo(self):
+        raise NotImplementedError('Subclasses must implement getAccountInfo')
+
+class MockBrokerConnector(IConnector): # provides a dummybroker that follows the IConnector rules and test the trading system
+    def __init__(self):
+        self.cash_balance = 100000.0
+        self.positions = {} # e.g., {'AAPL': 100}
+        self.order_history = []
+
+    def getMarketData(self, symbol, start_date, end_date):
+        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        prices = [100 + i*0.5, for i in range(len(dates))]
+        df = pd.DataFrame({'date': dates, 'symbol': symbol, 'price': prices})
+        return df
+
+    def submitOrder(self, order):
+        market_price = 100.0
+        order.execute(market_price)
+        self.order_history.append(order)
+
+        if order.status == 'filled':
+            if order.side == 'BUY':
+                cost = order.price * order.quantity
+                self.cash_balance -= cost
+                self.positions[order.symbol] = self.positions.get(order.symbol, 0) + cost
+            elif order.side == 'SELL':
+                revenue = order.price * order.quantity
+                self.cash_balance += revenue
+                self.positions[order.symbol] = self.positions.get(order.symbol, 0) - revenue
+
+        return order
+
+    def getAccountInfo(self):
+        return {
+            'cash_balance': self.cash_balance,
+            'positions': self.positions,
+            'order_history': self.order_history
+        }
