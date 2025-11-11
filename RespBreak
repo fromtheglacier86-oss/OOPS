@@ -1,15 +1,11 @@
 Role 1: The "Security & Filtering" Lead: 汪
-  This person is responsible for checking every incoming request before it hits the main application logic.    
-  Primary Components: Authentication & API Throttling    
-  Core Responsibilities:    
-    Implement the IAuthService interface.    
-    Implement the IRateLimiter interface.        
-    Create a "token bucket" or "sliding window" algorithm for the rate limiter.        
-    Create a simple in-memory "database" (like a Map) to store users and their generated API keys.    
-  Key Classes to Build:    
-    AuthService (implements IAuthService)        
-    RateLimiter (implements IRateLimiter)        
-    User (a simple data class)
+  This person is responsible for retrieving data through legit API and develop basic structure
+  Primary Components: Data retrieva;& layout
+  Core Responsibilities:
+    Implement basic user class
+    retrieve data through API with valid documentation and adapt their throtting
+    Construct basic infrastructure
+    perform econometrics-level data analysis
 
 Role 2: The "Backend & Data Model" Lead：刘
   This person is responsible for all the "business logic" and the data structures that the API uses. They build the actual trading simulation.
