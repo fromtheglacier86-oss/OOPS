@@ -1,0 +1,25 @@
+class APIGateway:
+    def __init__(self, auth_service, rate_limiter, connector):
+        self.auth_service = auth_service        # IAuthService
+        self.rate_limiter = rate_limiter        # IRateLimiter
+        self.connector = connector              # IConnector
+
+    def request(self, api_key: str, action: str, *args):
+        # 1. Authentication
+        if not self.auth_service.authenticate(api_key):
+            return "❌ Unauthorized: Invalid API key"
+
+        # 2. Rate Limiting
+        user_id = api_key
+        if not self.rate_limiter.allow_request(user_id):
+            return "⚠️ Too Many Requests"
+
+        # 3. Call Connector
+        if action == "get_data":
+            return self.connector.get_data()
+
+        elif action == "process_order":
+            return self.connector.process_order(args[0])
+
+        else:
+            return "❌ Unknown action"
